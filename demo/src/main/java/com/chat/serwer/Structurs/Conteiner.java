@@ -117,15 +117,4 @@ public class Conteiner {
             return 0L;
         }
     }
-
-    // Deprecated methods for backward compatibility
-    @Deprecated
-    public void save_Container() {
-        // This method is deprecated - messages are now saved directly to database
-    }
-
-    @Deprecated
-    public void update_Container() {
-        // This method is deprecated - messages are now saved directly to database
-    }
 }

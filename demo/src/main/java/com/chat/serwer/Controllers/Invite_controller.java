@@ -1,7 +1,10 @@
 package com.chat.serwer.Controllers;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +16,7 @@ import com.chat.serwer.DBO.Invitations_DBO;
 import com.chat.serwer.DBO.invitation_respons_DBO;
 import com.chat.serwer.Interfaces.Invations;
 import com.chat.serwer.Interfaces.Invations_response;
+import com.chat.serwer.Services.ContainerEasKeyService;
 import com.chat.serwer.Structurs.Invites;
 
 import jakarta.transaction.Transactional;
@@ -22,10 +26,12 @@ import jakarta.transaction.Transactional;
 public class Invite_controller {
     private final Invations invations;
     private final Invations_response invations_response;
+    private final ContainerEasKeyService containerEasKeyService;
 
-    public Invite_controller(Invations invations, Invations_response invations_response) {
+    public Invite_controller(Invations invations, Invations_response invations_response, ContainerEasKeyService containerEasKeyService) {
         this.invations = invations;
         this.invations_response = invations_response;
+        this.containerEasKeyService = containerEasKeyService;
     }
 
     @Transactional
@@ -63,6 +69,24 @@ public class Invite_controller {
         return ResponseEntity.ok(easEncryptedKey);
     }
 
+    @GetMapping("/getContainerEasKey/{containerId}/{userId}")
+    public ResponseEntity<?> getContainerEasKey(@PathVariable String containerId, @PathVariable String userId) {
+        try {
+            var encryptedKey = containerEasKeyService.getUserEasKey(containerId, userId);
+            if (encryptedKey.isPresent()) {
+                return ResponseEntity.ok(Map.of(
+                    "containerId", containerId,
+                    "userId", userId,
+                    "encryptedEasKey", encryptedKey.get()
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
     @Transactional
     @PostMapping("/setInviteResponse")
     public ResponseEntity<String> setInviteResponse(@RequestBody invitation_respons_DBO invite) {
@@ -73,6 +97,13 @@ public class Invite_controller {
         invations_response.save(invite_Respons);
         invations.deleteByUsername1AndUsername2(invite.getUsername1(), invite.getUsername2());
         return ResponseEntity.ok("Invite response set successfully");
+    }
+
+    @Transactional
+    @DeleteMapping("/deleteInviteResponse")
+    public ResponseEntity<String> deleteInviteResponse(@RequestBody invitation_respons_DBO invite) {
+        invations_response.deleteByUsername1AndUsername2(invite.getUsername1(), invite.getUsername2());
+        return ResponseEntity.ok("Invite response deleted successfully");
     }
 
 }

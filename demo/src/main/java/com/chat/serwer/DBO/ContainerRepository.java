@@ -20,9 +20,6 @@ public class ContainerRepository {
     @Column(name = "last_activity")
     private LocalDateTime lastActivity;
 
-    @Column(name = "Eas_key")
-    private String eas_key;
-
     // Constructors
     public ContainerRepository() {}
 
@@ -30,21 +27,12 @@ public class ContainerRepository {
         this.id = id;
         this.createdAt = LocalDateTime.now();
         this.lastActivity = LocalDateTime.now();
-        this.eas_key = null;
     }
 
-    public ContainerRepository(String id, String eas_key) {
-        this.id = id;
-        this.createdAt = LocalDateTime.now();
-        this.lastActivity = LocalDateTime.now();
-        this.eas_key = eas_key;
-    }
-
-    public ContainerRepository(String id, LocalDateTime createdAt, LocalDateTime lastActivity, String eas_key) {
+    public ContainerRepository(String id, LocalDateTime createdAt, LocalDateTime lastActivity) {
         this.id = id;
         this.createdAt = createdAt;
         this.lastActivity = lastActivity;
-        this.eas_key = eas_key;
     }
 
     // Getters and setters
@@ -70,14 +58,6 @@ public class ContainerRepository {
 
     public void setLastActivity(LocalDateTime lastActivity) {
         this.lastActivity = lastActivity;
-    }
-
-    public String getEas_key() {
-        return eas_key;
-    }
-
-    public void setEas_key(String eas_key) {
-        this.eas_key = eas_key;
     }
 
     // Helper method to update last activity to current time

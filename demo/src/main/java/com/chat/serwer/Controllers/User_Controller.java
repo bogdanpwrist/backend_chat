@@ -1,6 +1,6 @@
 package com.chat.serwer.Controllers;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
@@ -58,8 +58,8 @@ public class User_Controller {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<ArrayList<User_DBO>> getAllUsers() {
-        ArrayList<User_DBO> users = userRepository.findAll();
+    public ResponseEntity<List<User_DBO>> getAllUsers() {
+        List<User_DBO> users = userRepository.findAll();
         return ResponseEntity.ok(users);
     }
 

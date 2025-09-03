@@ -18,11 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.chat.serwer.Structurs.ContainerCreationRequest;
 import com.chat.serwer.Structurs.ContainerDeletionRequest;
-import com.chat.serwer.Structurs.SetEASKeyRequest;
+import com.chat.serwer.Structurs.SetUserEasKeyRequest;
 import com.chat.serwer.DBO.ContainerRepository;
 import com.chat.serwer.DBO.UserContainerRepository;
+import com.chat.serwer.DBO.ContainerEasKey_DBO;
 import com.chat.serwer.Interfaces.ContainerRepositoryInterface;
 import com.chat.serwer.Interfaces.UserContainerRepositoryInterface;
+import com.chat.serwer.Interfaces.ContainerEasKeyRepository;
 import com.chat.serwer.Services.MessageService;
 
 import jakarta.transaction.Transactional;
@@ -36,6 +38,9 @@ public class Container_controller {
     
     @Autowired
     private UserContainerRepositoryInterface userContainerRepository;
+    
+    @Autowired
+    private ContainerEasKeyRepository containerEasKeyRepository;
     
     @Autowired
     private MessageService messageService;
@@ -52,10 +57,9 @@ public class Container_controller {
             
             // Generate unique container ID
             String containerId = "chat_" + UUID.randomUUID().toString();
-            String easKey = request.getEasKey();
 
-            // Create container
-            ContainerRepository container = new ContainerRepository(containerId, easKey);
+            // Create container without AES key (it will be set separately for each user)
+            ContainerRepository container = new ContainerRepository(containerId);
             containerRepository.save(container);
             
             // Add both users to the container
@@ -129,6 +133,8 @@ public class Container_controller {
             if (sharedContainerId != null) {
                 // Delete messages first
                 messageService.deleteMessagesByContainer(sharedContainerId);
+                // Delete EAS keys for all users
+                containerEasKeyRepository.deleteByContainerId(sharedContainerId);
                 // Delete user-container relationships
                 userContainerRepository.deleteByContainerId(sharedContainerId);
                 // Delete container
@@ -143,19 +149,48 @@ public class Container_controller {
         }
     }
 
-    @PostMapping("/SetEASkey")
-    public ResponseEntity<?> setEASKey(@RequestBody SetEASKeyRequest request) {
+    @PostMapping("/setUserEasKey")
+    public ResponseEntity<?> setUserEasKey(@RequestBody SetUserEasKeyRequest request) {
         try {
             String containerId = request.getContainerId();
-            String easKey = request.getEasKey();
+            String userId = request.getUserId();
+            String encryptedEasKey = request.getEncryptedEasKey();
 
-            // Validate and set the EAS key
-            if (containerId == null || easKey == null) {
-                return ResponseEntity.badRequest().body("Invalid request");
+            // Validate request
+            if (containerId == null || userId == null || encryptedEasKey == null) {
+                return ResponseEntity.badRequest().body("Invalid request - all fields required");
             }
 
-            containerRepository.setEASKey(containerId, easKey);
-            return ResponseEntity.ok("EAS key set successfully");
+            // Save or update the encrypted EAS key for this user and container
+            ContainerEasKey_DBO easKeyRecord = new ContainerEasKey_DBO(containerId, userId, encryptedEasKey);
+            containerEasKeyRepository.save(easKeyRecord);
+            
+            return ResponseEntity.ok("User EAS key set successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/getUserEasKey/{containerId}/{userId}")
+    public ResponseEntity<?> getUserEasKey(@PathVariable String containerId, @PathVariable String userId) {
+        try {
+            // Validate parameters
+            if (containerId == null || userId == null) {
+                return ResponseEntity.badRequest().body("Invalid parameters");
+            }
+
+            // Find the encrypted EAS key for this user and container
+            var easKeyRecord = containerEasKeyRepository.findByContainerIdAndUserId(containerId, userId);
+            
+            if (easKeyRecord.isPresent()) {
+                return ResponseEntity.ok(Map.of(
+                    "containerId", containerId,
+                    "userId", userId,
+                    "encryptedEasKey", easKeyRecord.get().getEncryptedEasKey()
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
